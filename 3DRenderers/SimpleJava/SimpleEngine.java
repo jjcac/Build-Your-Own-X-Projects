@@ -1,9 +1,9 @@
 /**
  * @author John Caceres
  * 
- * A runnable class that serves as a basic 3D render engine.
+ * A runnable class that serves as the main class for a basic 3D render engine.
  * 
- * This class covers basic 3D rendering with orthographic projection,
+ * This project covers basic 3D rendering with orthographic projection,
  * simple triangle rasterization, z-buffering, and flat shading.
  * 
  * For more complex engines, OpenGL is recommended, and there are
@@ -46,30 +46,4 @@ public class SimpleEngine {
         frame.setVisible(true);
     }
 
-    // Vertex class to store an ordered triple of coordinates
-    class Vertex {
-        double x;
-        double y;
-        double z;
-        Vertex(double x, double y, double z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-    }
-
-    // Triangle class made of a color and 3 Vertices
-    class Triangle {
-        Vertex v1;
-        Vertex v2;
-        Vertex v3;
-        Color color;
-        Triangle(Vertex v1, Vertex v2, Vertex v3, Color color) {
-            this.v1 = v1;
-            this.v2 = v2;
-            this.v3 = v3;
-            this.color = color;
-        }
-    }
-    
 }
