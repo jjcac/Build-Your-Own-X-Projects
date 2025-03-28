@@ -14,7 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class SimpleEngine {
-
+    
     // To start, our GUI wrapper is handled in the main method.
     public static void main(String[] args) {
         // Setup frame and pane
@@ -45,5 +45,4 @@ public class SimpleEngine {
         frame.setSize(800, 800);
         frame.setVisible(true);
     }
-
 }
