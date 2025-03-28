@@ -2,6 +2,9 @@
  * @author John Caceres
  * 
  * A class to represent a point in 3-dimensional space.
+ * 
+ * The x-coordinate represents left-right movement, y up-down,
+ * and z depth, i.e. positive z represents moving towards the observer.
  */
 
 public class Vertex {
