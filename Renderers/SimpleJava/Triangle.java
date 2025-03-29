@@ -1,11 +1,11 @@
-import java.awt.Color;
-
 /**
  * @author John Caceres
  * 
  * A class to repreent a drawn triangle in 3-dimensional space,
  * i.e. three vertices and a color.
  */
+
+ import java.awt.Color;
 
 public class Triangle {
     private Vertex v1;
