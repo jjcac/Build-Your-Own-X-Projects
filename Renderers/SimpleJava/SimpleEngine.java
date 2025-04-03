@@ -13,6 +13,7 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Path2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 public class SimpleEngine {
@@ -25,7 +26,7 @@ public class SimpleEngine {
         pane.setLayout(new BorderLayout());
 
         // Slider to control horizontal rotation
-        JSlider headingSlider = new JSlider(0, 360, 180);
+        JSlider headingSlider = new JSlider(-180, 180, 0);
         pane.add(headingSlider, BorderLayout.SOUTH);
 
         // Slider to control vertical rotation
@@ -39,7 +40,7 @@ public class SimpleEngine {
                 g2.setColor(Color.BLACK);
                 g2.fillRect(0, 0, getWidth(), getHeight());
 
-                // Rendering magic will happen below.
+                // Rendering magic happens below.
                 
                 // Start adding triangles:
                 ArrayList<Triangle> tris = new ArrayList<>();
@@ -77,10 +78,9 @@ public class SimpleEngine {
                 });
                 // Combine matrices
                 Matrix3x3 combinedTransformer = headingTransformer.multiply(pitchTransformer);
-                
-                // Prepare to draw
-                g2.translate(getWidth() / 2, getHeight() / 2);
-                g2.setColor(Color.WHITE);
+
+                // Create image to be specified/filled
+                BufferedImage image = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 
                 // Draw triangles
                 for (Triangle t : tris) {
@@ -88,14 +88,44 @@ public class SimpleEngine {
                     Vertex v1 = combinedTransformer.transform(t.getV1());
                     Vertex v2 = combinedTransformer.transform(t.getV2());
                     Vertex v3 = combinedTransformer.transform(t.getV3());
-                    // Paint corrected image
-                    Path2D path = new Path2D.Double();
-                    path.moveTo(v1.getX(), v1.getY());
-                    path.lineTo(v2.getX(), v2.getY());
-                    path.lineTo(v3.getX(), v3.getY());
-                    path.closePath();
-                    g2.draw(path);
+
+                    // To fill in the triangles, we will rasterize (convert to a list of pixels)
+                    // via barycentric coordinates. Real 3d engines use hardware rasterization,
+                    // which is much more efficient, but we can't access the graphic card here,
+                    // so we will do it manually.
+                    
+                    // Since we are manually assessing each triangle, we must manually
+                    // translate the vertices to be centered first.
+                    v1.setX(v1.getX() + getWidth() / 2);
+                    v1.setY(v1.getY() + getHeight() / 2);
+                    v2.setX(v2.getX() + getWidth() / 2);
+                    v2.setY(v2.getY() + getHeight() / 2);
+                    v3.setX(v3.getX() + getWidth() / 2);
+                    v3.setY(v3.getY() + getHeight() / 2);
+
+                    // Compute rectangular bounds for triangle
+                    int minX = (int) Math.max(0, Math.ceil(Math.min(v1.getX(), Math.min(v2.getX(), v3.getX()))));
+                    int maxX = (int) Math.min(image.getWidth() - 1, Math.floor(Math.max(v1.getX(), Math.max(v2.getX(), v3.getX()))));
+                    int minY = (int) Math.max(0, Math.ceil(Math.min(v1.getY(), Math.min(v2.getY(), v3.getY()))));
+                    int maxY = (int) Math.min(image.getHeight() - 1, Math.floor(Math.max(v1.getY(), Math.max(v2.getY(), v3.getY()))));
+
+                    double triangleArea = (v1.getY() - v3.getY()) * (v2.getX() - v3.getX())
+                        + (v2.getY() - v3.getY()) * (v3.getX() - v1.getX());
+
+                    // Color pixels of visible triangles
+                    for (int y = minY; y <= maxY; y++) {
+                        for (int x = minX; x <= maxX; x++) {
+                            double b1 = ((y - v3.getY()) * (v2.getX() - v3.getX()) + (v2.getY() - v3.getY()) * (v3.getX() - x)) / triangleArea;
+                            double b2 = ((y - v1.getY()) * (v3.getX() - v1.getX()) + (v3.getY() - v1.getY()) * (v1.getX() - x)) / triangleArea;
+                            double b3 = ((y - v2.getY()) * (v1.getX() - v2.getX()) + (v1.getY() - v2.getY()) * (v2.getX() - x)) / triangleArea;
+                            if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
+                                image.setRGB(x, y, t.getColor().getRGB());
+                            }
+                        }
+                    }
                 }
+
+                g2.drawImage(image, 0, 0, null);
             }
         };
         pane.add(renderPanel, BorderLayout.CENTER);
@@ -105,7 +135,6 @@ public class SimpleEngine {
         // In this case, the lambda expression accepts some parameter e but doesn't necessarily use it.
         headingSlider.addChangeListener(e -> renderPanel.repaint());
         pitchSlider.addChangeListener(e -> renderPanel.repaint());
-
 
         frame.setSize(800, 800);
         frame.setVisible(true);
