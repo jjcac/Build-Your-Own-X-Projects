@@ -59,6 +59,24 @@ public class SimpleEngine {
                                       new Vertex(100, -100, -100),
                                       new Vertex(-100, -100, 100),
                                       Color.BLUE));
+
+                // Use matrices to transform view with sliders
+                // Heading slider functionality:
+                double heading = Math.toRadians(headingSlider.getValue());
+                Matrix3x3 headingTransformer = new Matrix3x3(new double[] {
+                    Math.cos(heading), 0, -Math.sin(heading),
+                    0, 1, 0,
+                    Math.sin(heading), 0, Math.cos(heading)
+                });
+                // Pitch slider functionality:
+                double pitch = Math.toRadians(pitchSlider.getValue());
+                Matrix3x3 pitchTransformer = new Matrix3x3(new double[] {
+                    1, 0, 0,
+                    0, Math.cos(pitch), Math.sin(pitch),
+                    0, -Math.sin(pitch), Math.cos(pitch)
+                });
+                // Combine matrices
+                Matrix3x3 combinedTransformer = headingTransformer.multiply(pitchTransformer);
                 
                 // Prepare to draw
                 g2.translate(getWidth() / 2, getHeight() / 2);
@@ -66,16 +84,28 @@ public class SimpleEngine {
 
                 // Draw triangles
                 for (Triangle t : tris) {
+                    // Transform first to set up corrected image
+                    Vertex v1 = combinedTransformer.transform(t.getV1());
+                    Vertex v2 = combinedTransformer.transform(t.getV2());
+                    Vertex v3 = combinedTransformer.transform(t.getV3());
+                    // Paint corrected image
                     Path2D path = new Path2D.Double();
-                    path.moveTo(t.getV1().getX(), t.getV1().getY());
-                    path.lineTo(t.getV2().getX(), t.getV2().getY());
-                    path.lineTo(t.getV3().getX(), t.getV3().getY());
+                    path.moveTo(v1.getX(), v1.getY());
+                    path.lineTo(v2.getX(), v2.getY());
+                    path.lineTo(v3.getX(), v3.getY());
                     path.closePath();
                     g2.draw(path);
                 }
             }
         };
         pane.add(renderPanel, BorderLayout.CENTER);
+
+        // Add listeners for sliders
+        // NOTE TO SELF: The arrow operator is used for lambda expressions.
+        // In this case, the lambda expression accepts some parameter e but doesn't necessarily use it.
+        headingSlider.addChangeListener(e -> renderPanel.repaint());
+        pitchSlider.addChangeListener(e -> renderPanel.repaint());
+
 
         frame.setSize(800, 800);
         frame.setVisible(true);
