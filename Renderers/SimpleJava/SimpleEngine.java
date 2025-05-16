@@ -34,6 +34,37 @@ public class SimpleEngine {
         
         return new Color(red, green, blue);
     }
+
+    // As a bonus, we can create a spherical approximation from the tetrahedron.
+    // To do so, we repeatedly subdivide each triangle into four smaller ones and
+    // "inflate."
+    public static ArrayList<Triangle> inflate(ArrayList<Triangle> tris) {
+        ArrayList<Triangle> result = new ArrayList<>();
+        for (Triangle t : tris) {
+            Vertex m1 = new Vertex((t.getV1().getX() + t.getV2().getX())/2,
+                                   (t.getV1().getY() + t.getV2().getY())/2,
+                                   (t.getV1().getZ() + t.getV2().getZ())/2);
+            Vertex m2 = new Vertex((t.getV2().getX() + t.getV3().getX())/2,
+                                   (t.getV2().getY() + t.getV3().getY())/2,
+                                   (t.getV2().getZ() + t.getV3().getZ())/2);
+            Vertex m3 = new Vertex((t.getV1().getX() + t.getV3().getX())/2,
+                                   (t.getV1().getY() + t.getV3().getY())/2,
+                                   (t.getV1().getZ() + t.getV3().getZ())/2);
+            result.add(new Triangle(t.getV1(), m1, m3, t.getColor()));
+            result.add(new Triangle(t.getV2(), m1, m2, t.getColor()));
+            result.add(new Triangle(t.getV3(), m2, m3, t.getColor()));
+            result.add(new Triangle(m1, m2, m3, t.getColor()));
+        }
+        for (Triangle t : result) {
+            for (Vertex v : new Vertex[] {t.getV1(), t.getV2(), t.getV3()}) {
+                double l = Math.sqrt(v.getX() * v.getX() + v.getY() * v.getY() + v.getZ() * v.getZ()) / Math.sqrt(30000);
+                v.setX(v.getX() / l);
+                v.setY(v.getY() / l);
+                v.setZ(v.getZ() / l);
+            }
+        }
+        return result;
+    }
     
     // To start, our GUI wrapper is handled in the main method.
     public static void main(String[] args) {
@@ -77,6 +108,17 @@ public class SimpleEngine {
                                       new Vertex(100, -100, -100),
                                       new Vertex(-100, -100, 100),
                                       Color.BLUE));
+
+                // This is where the tetrahedron gets inflated to approximate
+                // a sphere. An inflation point of 0 yields the original
+                // tetrahedron, and a higher value leads to a more accurate
+                // approximation. The smallest value with an "accurate"
+                // approximation is 4. Personally, there is a noticeable
+                // slowdown around 7 or higher.
+                int inflationPoint = 4;
+                for (int i = 0; i < inflationPoint; i++) {
+                    tris = inflate(tris);
+                }
 
                 // Use matrices to transform view with sliders
                 // Heading slider functionality:
