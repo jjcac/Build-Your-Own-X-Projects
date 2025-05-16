@@ -12,11 +12,28 @@
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 public class SimpleEngine {
+
+    // Helper method to get the shaded version of the color of our triangle.
+    // A more naive version wouldn't adjust the color space, but since Java
+    // uses sRGB color space, this leads to a quicker falloff than we would like.
+    // So, we need to convert each color from scaled to linear, apply shade, and
+    // then convert back to scaled. Real conversion is quite involved, so
+    // this is just a basic approximation.
+    public static Color getShade(Color color, double shade) {
+        double redLinear = Math.pow(color.getRed(), 2.4) * shade;
+        double greenLinear = Math.pow(color.getGreen(), 2.4) * shade;
+        double blueLinear = Math.pow(color.getBlue(), 2.4) * shade;
+
+        int red = (int) Math.pow(redLinear, 1/2.4);
+        int green = (int) Math.pow(greenLinear, 1/2.4);
+        int blue = (int) Math.pow(blueLinear, 1/2.4);
+        
+        return new Color(red, green, blue);
+    }
     
     // To start, our GUI wrapper is handled in the main method.
     public static void main(String[] args) {
@@ -108,6 +125,28 @@ public class SimpleEngine {
                     v3.setX(v3.getX() + getWidth() / 2);
                     v3.setY(v3.getY() + getHeight() / 2);
 
+                    // Calculate normal vector and normal length
+                    Vertex ab = new Vertex(v2.getX() - v1.getX(),
+                                           v2.getY() - v1.getY(),
+                                           v2.getZ() - v1.getZ());
+                    Vertex ac = new Vertex(v3.getX() - v1.getX(),
+                                           v3.getY() - v1.getY(),
+                                           v3.getZ() - v1.getZ());
+                    Vertex norm = new Vertex(ab.getY() * ac.getZ() - ab.getZ() * ac.getY(),
+                                             ab.getZ() * ac.getX() - ab.getX() * ac.getZ(),
+                                             ab.getX() * ac.getY() - ab.getY() * ac.getX());
+                    double normalLength = Math.sqrt(norm.getX() * norm.getX() + norm.getY() * norm.getY() + norm.getZ() * norm.getZ());
+                    norm.setX(norm.getX() / normalLength);
+                    norm.setY(norm.getY() / normalLength);
+                    norm.setZ(norm.getZ() / normalLength);
+
+                    // We need the cosine of the angle between the light vector and the normal vector,
+                    // and assuming light vector [0, 0, 1] (directional light - our light is positioned
+                    // directly behind the camera at some infinite distance), the formula becomes
+                    // cos(theta) = a_z. For our purposes, we drop the sign, but in other cases the
+                    // sign is important to keep track of for shading.
+                    double angleCos = Math.abs(norm.getZ());
+
                     // Compute rectangular bounds for triangle
                     int minX = (int) Math.max(0, Math.ceil(Math.min(v1.getX(), Math.min(v2.getX(), v3.getX()))));
                     int maxX = (int) Math.min(image.getWidth() - 1, Math.floor(Math.max(v1.getX(), Math.max(v2.getX(), v3.getX()))));
@@ -128,7 +167,7 @@ public class SimpleEngine {
                                 double depth = b1 * v1.getZ() + b2 * v2.getZ() + b3 * v3.getZ();
                                 int zIndex = y * image.getWidth() + x;
                                 if (zBuffer[zIndex] < depth) {
-                                    image.setRGB(x, y, t.getColor().getRGB());
+                                    image.setRGB(x, y, getShade(t.getColor(), angleCos).getRGB());
                                     zBuffer[zIndex] = depth;
                                 }
                             }
