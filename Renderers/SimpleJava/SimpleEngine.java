@@ -82,6 +82,11 @@ public class SimpleEngine {
                 // Create image to be specified/filled
                 BufferedImage image = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 
+                double[] zBuffer = new double[image.getWidth() * image.getHeight()];
+                // Initialize with extremely far away depths
+                for (int i = 0; i < zBuffer.length; i++) {
+                    zBuffer[i] = Double.NEGATIVE_INFINITY;
+                }
                 // Draw triangles
                 for (Triangle t : tris) {
                     // Transform first to set up corrected image
@@ -119,7 +124,13 @@ public class SimpleEngine {
                             double b2 = ((y - v1.getY()) * (v3.getX() - v1.getX()) + (v3.getY() - v1.getY()) * (v1.getX() - x)) / triangleArea;
                             double b3 = ((y - v2.getY()) * (v1.getX() - v2.getX()) + (v1.getY() - v2.getY()) * (v2.getX() - x)) / triangleArea;
                             if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
-                                image.setRGB(x, y, t.getColor().getRGB());
+                                // Handle z-buffer
+                                double depth = b1 * v1.getZ() + b2 * v2.getZ() + b3 * v3.getZ();
+                                int zIndex = y * image.getWidth() + x;
+                                if (zBuffer[zIndex] < depth) {
+                                    image.setRGB(x, y, t.getColor().getRGB());
+                                    zBuffer[zIndex] = depth;
+                                }
                             }
                         }
                     }
